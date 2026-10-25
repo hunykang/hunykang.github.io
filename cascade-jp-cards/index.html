@@ -52,7 +52,7 @@
   <h1>Cascade 일본어 카드 — N5·N4·N3 (레벨별 500문장)</h1>
   <p>기본 레벨은 N4입니다. N5·N3 버튼으로 바꿀 수 있습니다. 시작할 때 선택한 레벨 안에서만 랜덤으로 200문장을 뽑아, 한 번에 200문장을 학습합니다.</p>
   <p>앞면은 한국어 뜻, 뒷면은 일본어 문장을 덩어리(문절)씩 펼칩니다. 조사는 명사에 붙인 채로 나누지 않았습니다. 음성은 일본어 원문만 일본어 음성으로 읽고, 로마자·한글 발음은 화면 표시만 합니다.</p>
-  <p>카드 터치만으로도 공부할 수 있습니다. 터치하면 덩어리가 펼쳐지고, 다 펼친 뒤 터치하면 일본어 음성이 재생되며, 그다음 터치하면 다음 문장으로 넘어갑니다. (버튼·선택 메뉴를 터치하면 이 흐름이 작동하지 않습니다.)</p>
+  <p>카드 터치만으로도 공부할 수 있습니다. 터치하면 덩어리가 펼쳐지고, 다 펼친 뒤 터치하면 일본어 음성이 재생되며, 그다음 터치하면 다음 문장으로 넘어갑니다. 스페이스바도 카드 터치와 같은 효과가 있습니다. (버튼·선택 메뉴를 터치하면 이 흐름이 작동하지 않습니다.)</p>
 </header>
 
 <div class="bar">
@@ -126,10 +126,10 @@ function updateLevelButtons(){
 }
 function updateTapHint(){
   const c = cur();
-  if(audioPlaying) $('tapHint').textContent = '🔊 일본어 음성 재생 중입니다. 다시 터치하면 다음 문장으로 넘어갑니다.';
-  else if(shown < c.chunks.length) $('tapHint').textContent = '👆 카드를 터치하면 다음 덩어리가 펼쳐집니다. (' + shown + ' / ' + c.chunks.length + ')';
-  else if(!audioPlayed) $('tapHint').textContent = '👆 덩어리를 다 펼쳤습니다. 카드를 터치하면 일본어 음성이 재생됩니다.';
-  else $('tapHint').textContent = '👆 카드를 터치하면 다음 문장으로 넘어갑니다.';
+  if(audioPlaying) $('tapHint').textContent = '🔊 일본어 음성 재생 중입니다. 다시 터치하거나 스페이스바를 누르면 다음 문장으로 넘어갑니다.';
+  else if(shown < c.chunks.length) $('tapHint').textContent = '👆 카드를 터치하거나 스페이스바를 누르면 다음 덩어리가 펼쳐집니다. (' + shown + ' / ' + c.chunks.length + ')';
+  else if(!audioPlayed) $('tapHint').textContent = '👆 덩어리를 다 펼쳤습니다. 카드를 터치하거나 스페이스바를 누르면 일본어 음성이 재생됩니다.';
+  else $('tapHint').textContent = '👆 카드를 터치하거나 스페이스바를 누르면 다음 문장으로 넘어갑니다.';
 }
 function shuffleArr(a){
   for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
@@ -234,14 +234,27 @@ function autoStep(){
 $('stepBtn').onclick = () => { stopAuto(); revealOne(); };
 $('allBtn').onclick = () => { stopAuto(); revealAll(); };
 $('speakBtn').onclick = () => { stopAuto(); playTapAudio(); };
-$('card').addEventListener('click', (e) => {
-  if(e.target.closest('button,select,input,label,a')) return;
-  if(auto){ stopAuto(); status('자동재생을 멈췄습니다. 카드를 다시 터치하면 이어집니다.'); updateTapHint(); return; }
+function doCardTap(){
+  if(auto){ stopAuto(); status('자동재생을 멈췄습니다. 카드 터치 또는 스페이스바로 이어집니다.'); updateTapHint(); return; }
   if(audioPlaying){ speechGen++; audioPlaying = false; audioPlayed = true; speechSynthesis.cancel(); goNext(); return; }
   const c = cur();
   if(shown < c.chunks.length){ revealOne(); return; }
   if(!audioPlayed){ playTapAudio(); return; }
   goNext();
+}
+$('card').addEventListener('click', (e) => {
+  if(e.target.closest('button,select,input,label,a')) return;
+  doCardTap();
+});
+document.addEventListener('keydown', (e) => {
+  if(e.code !== 'Space' && e.key !== ' ') return;
+  if(e.repeat) return;
+  if(e.target.closest('select,input,textarea,label,a')) return;
+  // 버튼에 포커스가 있어도 스페이스바는 카드 터치와 같은 효과로 동작한다.
+  // (버튼의 기본 스페이스 동작이 중복 실행되지 않도록 포커스를 빼고 기본 동작을 막는다.)
+  if(e.target.closest('button')) e.target.blur();
+  e.preventDefault();
+  doCardTap();
 });
 $('prevBtn').onclick = () => { stopAuto(); idx = (idx - 1 + session.length) % session.length; render(); };
 $('nextBtn').onclick = () => { stopAuto(); idx = (idx + 1) % session.length; render(); };
